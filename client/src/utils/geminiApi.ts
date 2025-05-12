@@ -199,42 +199,80 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
 export async function generateDetailContent(
   subtopicId: string,
   businessIdea: string,
-  subtopicTitle: string
+  subtopicTitle: string,
+  creativeApproach = false
 ): Promise<DetailContent> {
-  const prompt = `
-    Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
-    
-    Format your response in Markdown with the following sections:
-    
-    ## Overview
-    [A concise introduction to this subtopic and why it's important for this specific business idea]
-    
-    ## Why This Matters
-    [Explanation of the importance and impact of this subtopic on business success]
-    
-    ## Step-by-Step Guide
-    [Detailed, actionable steps to implement or address this subtopic]
-    
-    ## Best Practices
-    [Industry best practices and tips for excellence in this area]
-    
-    ## Common Pitfalls
-    [Mistakes to avoid and challenges to anticipate]
-    
-    ## Industry-Specific Considerations
-    [Factors specifically relevant to "${businessIdea}" in this area]
-    
-    ## Next Steps
-    [What to do after addressing this subtopic and how it connects to other aspects of the business]
-    
-    Make the content practical, specific to "${businessIdea}", and immediately useful to someone implementing this business idea. Include examples and actionable advice throughout.
-  `;
+  let prompt;
+  
+  if (creativeApproach) {
+    prompt = `
+      Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+      
+      Try a radically different approach in your response. Be innovative, think outside the box, and challenge conventional wisdom.
+      Consider unconventional strategies, cutting-edge technologies, or unique business models that might not be standard in the industry.
+      
+      Format your response in Markdown with the following sections:
+      
+      ## Unconventional Approach
+      [Introduce a bold, innovative approach to this subtopic that challenges business-as-usual thinking]
+      
+      ## Why Traditional Methods Fall Short
+      [Explain limitations of conventional approaches and why innovation is needed]
+      
+      ## Innovative Implementation Strategy
+      [Detailed, actionable steps to implement this creative approach]
+      
+      ## Embracing Disruption
+      [How to leverage emerging trends, technologies, or methodologies in groundbreaking ways]
+      
+      ## Managing Risks of Innovation
+      [How to mitigate potential downsides of taking an unconventional path]
+      
+      ## Competitive Advantage
+      [How this approach creates unique value and sets "${businessIdea}" apart from competitors]
+      
+      ## Measuring Success Differently
+      [New metrics or frameworks to evaluate the success of this approach]
+      
+      Make the content bold, provocative yet practical, and immediately useful to someone implementing this business idea. Focus on actionable insights that truly challenge the status quo.
+    `;
+  } else {
+    prompt = `
+      Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+      
+      Format your response in Markdown with the following sections:
+      
+      ## Overview
+      [A concise introduction to this subtopic and why it's important for this specific business idea]
+      
+      ## Why This Matters
+      [Explanation of the importance and impact of this subtopic on business success]
+      
+      ## Step-by-Step Guide
+      [Detailed, actionable steps to implement or address this subtopic]
+      
+      ## Best Practices
+      [Industry best practices and tips for excellence in this area]
+      
+      ## Common Pitfalls
+      [Mistakes to avoid and challenges to anticipate]
+      
+      ## Industry-Specific Considerations
+      [Factors specifically relevant to "${businessIdea}" in this area]
+      
+      ## Next Steps
+      [What to do after addressing this subtopic and how it connects to other aspects of the business]
+      
+      Make the content practical, specific to "${businessIdea}", and immediately useful to someone implementing this business idea. Include examples and actionable advice throughout.
+    `;
+  }
 
   // Define the generation configuration
   const generationConfig: GenerationConfig = {
-    temperature: 0.2,
+    // Use higher temperature for creative mode to get more varied responses
+    temperature: creativeApproach ? 0.8 : 0.2,
     topK: 40,
-    topP: 0.95,
+    topP: creativeApproach ? 0.98 : 0.95,
     maxOutputTokens: 8192,
     // responseMimeType: "text/plain", // Uncomment if supported in your version
   };

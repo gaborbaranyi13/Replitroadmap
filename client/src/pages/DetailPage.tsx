@@ -12,6 +12,7 @@ const DetailPage: React.FC = () => {
   const { roadmapData, detailContent, isLoading, error, getDetailContent } = useRoadmap();
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [currentSubtopicId, setCurrentSubtopicId] = useState<string | null>(null);
+  const [isCreativeMode, setIsCreativeMode] = useState(false);
   
   useEffect(() => {
     if (match && params?.subtopicId && roadmapData && 
@@ -19,10 +20,11 @@ const DetailPage: React.FC = () => {
       // Only fetch if we haven't attempted yet, or if the subtopic ID changed
       setHasAttemptedLoad(true);
       setCurrentSubtopicId(params.subtopicId);
+      setIsCreativeMode(false); // Reset creative mode on navigation
       getDetailContent(params.subtopicId);
     }
   }, [match, params?.subtopicId, roadmapData, getDetailContent, hasAttemptedLoad, currentSubtopicId]);
-
+  
   // Add title to document
   useEffect(() => {
     if (detailContent) {
@@ -133,7 +135,7 @@ const DetailPage: React.FC = () => {
           transition={{ duration: 0.3 }}
         >
           <div className="mb-8 border-b border-gray-100 pb-8">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
                 {detailContent.section}
               </span>
@@ -141,6 +143,12 @@ const DetailPage: React.FC = () => {
                 <FileText className="w-3 h-3 mr-1" />
                 Detailed Guide
               </span>
+              {isCreativeMode && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 animate-pulse">
+                  <span className="mr-1">✨</span>
+                  Creative Mode
+                </span>
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{detailContent.title}</h1>
             <p className="text-gray-600">
@@ -161,13 +169,33 @@ const DetailPage: React.FC = () => {
                   Find more detailed guides for each aspect of your business roadmap.
                 </p>
               </div>
-              <Link 
-                href="/roadmap" 
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-              >
-                <span>Return to Roadmap</span>
-                <ArrowLeft className="w-4 h-4 rotate-180" />
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => {
+                    if (match && params?.subtopicId) {
+                      setIsCreativeMode(true);
+                      getDetailContent(params.subtopicId, true);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors relative"
+                >
+                  <span>Creative</span>
+                  <span className="w-4 h-4">✨</span>
+                  {isCreativeMode && (
+                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
+                      ✓
+                    </span>
+                  )}
+                </button>
+                
+                <Link 
+                  href="/roadmap" 
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <span>Return to Roadmap</span>
+                  <ArrowLeft className="w-4 h-4 rotate-180" />
+                </Link>
+              </div>
             </div>
           </div>
         </motion.div>

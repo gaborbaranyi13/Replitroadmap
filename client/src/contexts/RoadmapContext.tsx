@@ -9,7 +9,7 @@ interface RoadmapContextType {
   isLoading: boolean;
   error: string | null;
   generateBusinessRoadmap: (businessIdea: string) => Promise<void>;
-  getDetailContent: (subtopicId: string) => Promise<void>;
+  getDetailContent: (subtopicId: string, creativeApproach?: boolean) => Promise<void>;
   toggleSectionExpansion: (sectionId: string) => void;
   resetRoadmap: () => void;
 }
@@ -44,7 +44,7 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const getDetailContent = async (subtopicId: string) => {
+  const getDetailContent = async (subtopicId: string, creativeApproach = false) => {
     if (!roadmapData) {
       setError("No roadmap data available. Please generate a roadmap first.");
       return;
@@ -68,8 +68,8 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
         throw new Error(`Subtopic ${subtopicId} not found.`);
       }
 
-      // Check if we already have this content to prevent unnecessary API calls
-      if (detailContent && detailContent.title === subtopic.title) {
+      // Skip cache check if creative approach is requested - always regenerate
+      if (!creativeApproach && detailContent && detailContent.title === subtopic.title) {
         setIsLoading(false);
         return;
       }
@@ -78,8 +78,17 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
         const content = await generateDetailContent(
           subtopicId,
           roadmapData.businessIdea,
-          subtopic.title
+          subtopic.title,
+          creativeApproach
         );
+        
+        if (creativeApproach) {
+          toast({
+            title: "Creative Mode",
+            description: "Generated a radically different approach for this topic!",
+            variant: "default",
+          });
+        }
         
         setDetailContent(content);
       } catch (apiError: any) {
