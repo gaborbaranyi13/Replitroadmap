@@ -90,7 +90,28 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
   // Get the model with the preview configuration
   const model = genAI.getGenerativeModel({
     model: GEMINI_MODEL_NAME,
-    generationConfig: baseGenerationConfig
+    generationConfig: {
+      ...baseGenerationConfig,
+      // Preview model specific settings
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_NONE"
+        }
+      ]
+    }
   });
 
   // Create content parts for the request
@@ -121,9 +142,7 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
       // Parse the sections
       let sections;
       try {
-        // Remove markdown code block markers and any surrounding whitespace
-        const cleanedText = text.replace(/```json\n|\n```/g, '').trim();
-        sections = JSON.parse(cleanedText);
+        sections = JSON.parse(text);
       } catch (parseError) {
         console.error("Failed to parse JSON from API response:", parseError);
         console.log("Raw text response (first 500 chars):", text.substring(0, 500));
@@ -132,8 +151,7 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           try {
-            const cleanedMatch = jsonMatch[0].replace(/```json\n|\n```/g, '').trim();
-            sections = JSON.parse(cleanedMatch);
+            sections = JSON.parse(jsonMatch[0]);
             console.log("Successfully extracted JSON using regex");
           } catch (e) {
             throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
@@ -261,9 +279,7 @@ async function generateApproachSuggestions(
     
     // Try to extract JSON from the response
     try {
-      // Remove markdown code block markers and any surrounding whitespace
-      const cleanedText = text.replace(/```json\n|\n```/g, '').trim();
-      const suggestions = JSON.parse(cleanedText);
+      const suggestions = JSON.parse(text);
       
       // Validate structure and return
       if (Array.isArray(suggestions) && suggestions.length > 0) {
