@@ -6,7 +6,17 @@ if (!API_KEY) {
   throw new Error("VITE_GEMINI_API_KEY is not set in environment variables.");
 }
 
-const GEMINI_MODEL_NAME = "gemini-1.5-flash"; // Using widely available model
+const GEMINI_MODEL_NAME = "gemini-2.5-flash-preview-04-17";
+
+// Updated configuration for the preview model
+const baseGenerationConfig: GenerationConfig = {
+  temperature: 0.2,
+  topK: 40,
+  topP: 0.95,
+  maxOutputTokens: 8192,
+  candidateCount: 1,
+  stopSequences: []
+};
 
 // Initialize the Google Generative AI SDK
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -77,19 +87,31 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
     The id for each subtopic should follow the pattern "section-1-1", "section-1-2", etc.
   `;
 
-  // Define the generation configuration
-  const generationConfig: GenerationConfig = {
-    temperature: 0.2,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 8192,
-    // responseMimeType: "application/json", // Uncomment if supported in your version
-  };
-
-  // Get the model
+  // Get the model with the preview configuration
   const model = genAI.getGenerativeModel({
     model: GEMINI_MODEL_NAME,
-    generationConfig,
+    generationConfig: {
+      ...baseGenerationConfig,
+      // Preview model specific settings
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_NONE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_NONE"
+        }
+      ]
+    }
   });
 
   // Create content parts for the request
