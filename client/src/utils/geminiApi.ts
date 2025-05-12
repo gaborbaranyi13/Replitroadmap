@@ -1,6 +1,6 @@
 import { RoadmapData, DetailContent } from "@/types";
 
-const GEMINI_MODEL = "gemini-2.5-pro-exp-03-25";
+const GEMINI_MODEL = "gemini-pro";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const API_URL = "https://generativelanguage.googleapis.com/v1/models";
 
@@ -59,6 +59,7 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
   `;
 
   const fetchRoadmap = async () => {
+    console.log("Generating roadmap with model:", GEMINI_MODEL, "and API key:", API_KEY ? "API key is set" : "API key is not set");
     const response = await fetch(`${API_URL}/${GEMINI_MODEL}:generateContent?key=${API_KEY}`, {
       method: "POST",
       headers: {
