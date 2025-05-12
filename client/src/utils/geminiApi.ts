@@ -30,15 +30,18 @@ async function retryWithBackoff<T>(fetchFn: () => Promise<T>, maxRetries = 3): P
     try {
       return await fetchFn();
     } catch (error: any) {
-      // Check for rate limiting errors
-      const isRateLimitError = error.status === 429 || 
-                              (error.message && (
-                                error.message.includes("429") || 
-                                error.message.toLowerCase().includes("rate limit") ||
-                                error.message.toLowerCase().includes("quota exceeded")
-                              ));
+      // Check for rate limiting and overload errors
+      const shouldRetry = error.status === 429 || 
+                         error.status === 503 ||
+                         (error.message && (
+                           error.message.includes("429") || 
+                           error.message.includes("503") ||
+                           error.message.toLowerCase().includes("rate limit") ||
+                           error.message.toLowerCase().includes("quota exceeded") ||
+                           error.message.toLowerCase().includes("overloaded")
+                         ));
                               
-      if (!isRateLimitError) {
+      if (!shouldRetry) {
         throw error;
       }
 
@@ -118,26 +121,16 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
         throw new Error("Unexpected API response format. The response doesn't contain text.");
       }
       
+      // Remove markdown code fence if present
+      const cleanText = text.replace(/^```json\n|\n```$/g, '').trim();
+      
       // Parse the sections
       let sections;
       try {
-        sections = JSON.parse(text);
+        sections = JSON.parse(cleanText);
       } catch (parseError) {
         console.error("Failed to parse JSON from API response:", parseError);
-        console.log("Raw text response (first 500 chars):", text.substring(0, 500));
-        
-        // Try to extract JSON if there's text before or after the JSON
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          try {
-            sections = JSON.parse(jsonMatch[0]);
-            console.log("Successfully extracted JSON using regex");
-          } catch (e) {
-            throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
-          }
-        } else {
-          throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
-        }
+        throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
       }
       
       // Validate and format the sections
