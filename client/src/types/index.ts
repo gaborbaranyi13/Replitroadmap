@@ -21,4 +21,12 @@ export interface DetailContent {
   title: string;
   section: string;
   content: string;
+  suggestions?: ApproachSuggestion[];
+}
+
+export interface ApproachSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  approachType: 'innovative' | 'traditional' | 'cost-effective' | 'technical' | 'creative';
 }

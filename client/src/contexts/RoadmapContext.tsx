@@ -9,7 +9,7 @@ interface RoadmapContextType {
   isLoading: boolean;
   error: string | null;
   generateBusinessRoadmap: (businessIdea: string) => Promise<void>;
-  getDetailContent: (subtopicId: string, creativeApproach?: boolean) => Promise<void>;
+  getDetailContent: (subtopicId: string, creativeApproach?: boolean, approachType?: string) => Promise<void>;
   toggleSectionExpansion: (sectionId: string) => void;
   resetRoadmap: () => void;
 }

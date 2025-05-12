@@ -1,4 +1,4 @@
-import { RoadmapData, DetailContent } from "@/types";
+import { RoadmapData, DetailContent, ApproachSuggestion } from "@/types";
 import { GoogleGenerativeAI, GenerationConfig, Content } from "@google/generative-ai";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -196,6 +196,151 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
   return retryWithBackoff(fetchRoadmap);
 }
 
+async function generateApproachSuggestions(
+  subtopicTitle: string,
+  businessIdea: string
+): Promise<ApproachSuggestion[]> {
+  // Define a prompt that asks for alternative approach suggestions
+  const prompt = `
+    Generate 4 alternative approach suggestions for implementing the subtopic "${subtopicTitle}" 
+    in a "${businessIdea}" business context.
+    
+    Each suggestion should represent a different approach type:
+    1. An innovative, cutting-edge approach
+    2. A traditional, proven approach
+    3. A cost-effective, budget-friendly approach
+    4. A technical, efficiency-focused approach
+    
+    Format your response as a JSON array with this structure:
+    [
+      {
+        "id": "1",
+        "title": "Brief, catchy title for the approach (max 5 words)",
+        "description": "One-sentence description of the approach (max 15 words)",
+        "approachType": "innovative" | "traditional" | "cost-effective" | "technical"
+      },
+      ...
+    ]
+    
+    Return ONLY the JSON array with no additional text, explanations, or formatting.
+  `;
+
+  // Define generation config with higher temperature for diverse suggestions
+  const generationConfig: GenerationConfig = {
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 1024,
+  };
+
+  // Get the model
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL_NAME,
+    generationConfig,
+  });
+
+  // Create content parts for the request
+  const contents: Content[] = [{
+    role: "user",
+    parts: [{ text: prompt }]
+  }];
+
+  try {
+    // Make the API call
+    const result = await model.generateContent({ contents });
+    const response = result.response;
+    const text = response.text();
+    
+    if (!text) {
+      throw new Error("Empty response from suggestions API");
+    }
+    
+    // Try to extract JSON from the response
+    try {
+      const suggestions = JSON.parse(text);
+      
+      // Validate structure and return
+      if (Array.isArray(suggestions) && suggestions.length > 0) {
+        return suggestions.slice(0, 4); // Ensure we don't return too many
+      } else {
+        throw new Error("Invalid suggestions format");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse suggestions JSON:", parseError);
+      
+      // Try to extract JSON if there's text before or after it
+      const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (jsonMatch) {
+        try {
+          const extractedJson = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(extractedJson) && extractedJson.length > 0) {
+            return extractedJson.slice(0, 4);
+          }
+        } catch (e) {
+          // If extraction fails, return fallback suggestions
+        }
+      }
+      
+      // If all parsing attempts fail, return fallback suggestions
+      return [
+        {
+          id: "1",
+          title: "Innovative Approach",
+          description: "Cutting-edge technology solution for this challenge",
+          approachType: "innovative"
+        },
+        {
+          id: "2",
+          title: "Proven Method",
+          description: "Traditional approach with consistent results",
+          approachType: "traditional"
+        },
+        {
+          id: "3",
+          title: "Budget-Friendly Option",
+          description: "Cost-effective implementation strategy",
+          approachType: "cost-effective"
+        },
+        {
+          id: "4",
+          title: "Technical Solution",
+          description: "Efficiency-focused approach using modern tools",
+          approachType: "technical"
+        }
+      ];
+    }
+  } catch (error) {
+    console.error("Error generating suggestions:", error);
+    // Return fallback suggestions in case of API error
+    return [
+      {
+        id: "1",
+        title: "Innovative Approach",
+        description: "Cutting-edge technology solution for this challenge",
+        approachType: "innovative"
+      },
+      {
+        id: "2",
+        title: "Proven Method",
+        description: "Traditional approach with consistent results",
+        approachType: "traditional"
+      },
+      {
+        id: "3",
+        title: "Budget-Friendly Option",
+        description: "Cost-effective implementation strategy",
+        approachType: "cost-effective"
+      },
+      {
+        id: "4",
+        title: "Technical Solution",
+        description: "Efficiency-focused approach using modern tools",
+        approachType: "technical"
+      }
+    ];
+  }
+}
+
 export async function generateDetailContent(
   subtopicId: string,
   businessIdea: string,
@@ -327,10 +472,22 @@ export async function generateDetailContent(
       
       const section = sectionMapping[sectionNumber] || `Section ${sectionNumber}`;
       
+      // Generate suggestion chips if not in creative mode
+      let suggestions;
+      if (!creativeApproach) {
+        try {
+          suggestions = await generateApproachSuggestions(subtopicTitle, businessIdea);
+        } catch (suggestionError) {
+          console.error("Failed to generate approach suggestions:", suggestionError);
+          // Continue without suggestions if they fail
+        }
+      }
+      
       return {
         title: subtopicTitle,
         section,
-        content
+        content,
+        suggestions
       };
     } catch (error) {
       console.error("Error in generateDetailContent:", error);
