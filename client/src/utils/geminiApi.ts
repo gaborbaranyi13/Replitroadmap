@@ -1,8 +1,15 @@
 import { RoadmapData, DetailContent } from "@/types";
+import { GoogleGenerativeAI, GenerationConfig, Content } from "@google/generative-ai";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const API_URL = "https://generativelanguage.googleapis.com/v1/models"; // Using stable v1 API
-const GEMINI_MODEL = "gemini-pro"; // Using gemini-pro as it's widely available
+if (!API_KEY) {
+  throw new Error("VITE_GEMINI_API_KEY is not set in environment variables.");
+}
+
+const GEMINI_MODEL_NAME = "gemini-1.5-flash"; // Using widely available model
+
+// Initialize the Google Generative AI SDK
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Helper function to retry API calls with exponential backoff
 async function retryWithBackoff<T>(fetchFn: () => Promise<T>, maxRetries = 3): Promise<T> {
@@ -13,8 +20,15 @@ async function retryWithBackoff<T>(fetchFn: () => Promise<T>, maxRetries = 3): P
     try {
       return await fetchFn();
     } catch (error: any) {
-      // Only retry on rate limiting errors (HTTP 429)
-      if (error.status !== 429) {
+      // Check for rate limiting errors
+      const isRateLimitError = error.status === 429 || 
+                              (error.message && (
+                                error.message.includes("429") || 
+                                error.message.toLowerCase().includes("rate limit") ||
+                                error.message.toLowerCase().includes("quota exceeded")
+                              ));
+                              
+      if (!isRateLimitError) {
         throw error;
       }
 
@@ -24,6 +38,8 @@ async function retryWithBackoff<T>(fetchFn: () => Promise<T>, maxRetries = 3): P
         throw error;
       }
 
+      console.log(`Rate limit hit. Retrying in ${delay/1000} seconds. Attempt ${retryCount} of ${maxRetries}`);
+      
       // Exponential backoff with a maximum of 32 seconds
       await new Promise(resolve => setTimeout(resolve, Math.min(delay, 32000)));
       delay *= 2; // Double the delay for the next retry
@@ -31,40 +47,6 @@ async function retryWithBackoff<T>(fetchFn: () => Promise<T>, maxRetries = 3): P
   }
 
   throw new Error("Maximum retries reached");
-}
-
-// Function to handle API errors consistently
-async function handleApiError(response: Response): Promise<never> {
-  let errorMessage = "Failed to generate content from the AI service.";
-  
-  try {
-    const errorData = await response.json();
-    console.error("Gemini API error details:", errorData);
-    
-    // Try to extract error message from Gemini response format
-    if (errorData.error && errorData.error.message) {
-      errorMessage = `API error: ${errorData.error.message}`;
-    }
-  } catch (e) {
-    console.error("Failed to parse error response:", e);
-  }
-  
-  // Provide specific error messages based on status code
-  if (response.status === 400) {
-    errorMessage = "Invalid request to the AI service. Please try a different business idea.";
-  } else if (response.status === 401 || response.status === 403) {
-    errorMessage = "API key authentication error. Please check the Gemini API key.";
-  } else if (response.status === 404) {
-    errorMessage = "The specified AI model was not found. The model may no longer be available.";
-  } else if (response.status === 429) {
-    errorMessage = "Rate limit exceeded. Please try again in a few moments.";
-  } else if (response.status >= 500) {
-    errorMessage = "AI service error. Please try again later.";
-  }
-  
-  const error = new Error(errorMessage);
-  (error as any).status = response.status;
-  throw error;
 }
 
 export async function generateRoadmap(businessIdea: string): Promise<RoadmapData> {
@@ -95,43 +77,42 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
     The id for each subtopic should follow the pattern "section-1-1", "section-1-2", etc.
   `;
 
+  // Define the generation configuration
+  const generationConfig: GenerationConfig = {
+    temperature: 0.2,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 8192,
+    // responseMimeType: "application/json", // Uncomment if supported in your version
+  };
+
+  // Get the model
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL_NAME,
+    generationConfig,
+  });
+
+  // Create content parts for the request
+  const contents: Content[] = [{
+    role: "user",
+    parts: [{ text: prompt }]
+  }];
+
   const fetchRoadmap = async () => {
     console.log("Generating roadmap for:", businessIdea);
     
     try {
-      const response = await fetch(`${API_URL}/${GEMINI_MODEL}:generateContent?key=${API_KEY}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        return handleApiError(response);
-      }
-
-      const data = await response.json();
-      console.log("Received API response:", data);
+      // Make the API call using the SDK
+      const result = await model.generateContent({ contents });
+      const response = result.response;
       
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        throw new Error("Unexpected API response format. The response doesn't contain the expected data structure.");
-      }
+      // Get the text from the response
+      const text = response.text();
+      console.log("Received API response text sample:", text.substring(0, 200) + "...");
       
-      // Extract the JSON from the response
-      const text = data.candidates[0].content.parts[0].text;
+      if (!text) {
+        throw new Error("Unexpected API response format. The response doesn't contain text.");
+      }
       
       // Parse the sections
       let sections;
@@ -139,8 +120,20 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
         sections = JSON.parse(text);
       } catch (parseError) {
         console.error("Failed to parse JSON from API response:", parseError);
-        console.log("Raw text response:", text);
-        throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
+        console.log("Raw text response (first 500 chars):", text.substring(0, 500));
+        
+        // Try to extract JSON if there's text before or after the JSON
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          try {
+            sections = JSON.parse(jsonMatch[0]);
+            console.log("Successfully extracted JSON using regex");
+          } catch (e) {
+            throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
+          }
+        } else {
+          throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
+        }
       }
       
       // Validate and format the sections
@@ -175,6 +168,20 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
       };
     } catch (error) {
       console.error("Error in generateRoadmap:", error);
+      // Check for rate limiting or other specific errors
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Check for rate limiting messages
+      const isRateLimitError = errorMessage.includes("429") || 
+                              errorMessage.toLowerCase().includes("rate limit") ||
+                              errorMessage.toLowerCase().includes("quota exceeded");
+      
+      if (isRateLimitError) {
+        const rateLimitError = new Error("Rate limit exceeded. Please try again later.");
+        (rateLimitError as any).status = 429;
+        throw rateLimitError;
+      }
+      
       if (error instanceof Error) {
         throw error;
       } else {
@@ -220,48 +227,47 @@ export async function generateDetailContent(
     Make the content practical, specific to "${businessIdea}", and immediately useful to someone implementing this business idea. Include examples and actionable advice throughout.
   `;
 
+  // Define the generation configuration
+  const generationConfig: GenerationConfig = {
+    temperature: 0.2,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 8192,
+    // responseMimeType: "text/plain", // Uncomment if supported in your version
+  };
+
+  // Get the model
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL_NAME,
+    generationConfig,
+  });
+
+  // Create content parts for the request
+  const contents: Content[] = [{
+    role: "user",
+    parts: [{ text: prompt }]
+  }];
+
   const fetchDetailContent = async () => {
     console.log("Generating detail content for:", subtopicTitle);
     
     try {
-      const response = await fetch(`${API_URL}/${GEMINI_MODEL}:generateContent?key=${API_KEY}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        return handleApiError(response);
-      }
-
-      const data = await response.json();
+      // Make the API call using the SDK
+      const result = await model.generateContent({ contents });
+      const response = result.response;
       
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        throw new Error("Unexpected API response format for detail content.");
-      }
+      // Get the text from the response
+      const content = response.text();
       
-      // Extract the content from the response
-      const content = data.candidates[0].content.parts[0].text;
+      if (!content) {
+        throw new Error("Unexpected API response format. The response doesn't contain markdown content.");
+      }
       
       // Extract the section name from the subtopic ID
       const sectionId = subtopicId.split('-')[0];
       const sectionNumber = parseInt(sectionId.replace('section-', ''));
       
-      // Map section numbers to section names (this would be better if we had access to the actual section titles)
+      // Map section numbers to section names
       const sectionMapping: Record<number, string> = {
         1: "Market Research & Validation",
         2: "Business Planning & Strategy",
@@ -284,6 +290,21 @@ export async function generateDetailContent(
       };
     } catch (error) {
       console.error("Error in generateDetailContent:", error);
+      
+      // Check for rate limiting or other specific errors
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Check for rate limiting messages
+      const isRateLimitError = errorMessage.includes("429") || 
+                              errorMessage.toLowerCase().includes("rate limit") ||
+                              errorMessage.toLowerCase().includes("quota exceeded");
+      
+      if (isRateLimitError) {
+        const rateLimitError = new Error("Rate limit exceeded. Please try again later.");
+        (rateLimitError as any).status = 429;
+        throw rateLimitError;
+      }
+      
       if (error instanceof Error) {
         throw error;
       } else {

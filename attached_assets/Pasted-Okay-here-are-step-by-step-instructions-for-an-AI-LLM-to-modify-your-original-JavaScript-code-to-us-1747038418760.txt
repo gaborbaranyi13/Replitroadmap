@@ -1,0 +1,350 @@
+Okay, here are step-by-step instructions for an AI LLM to modify your original JavaScript code to use the @google/genai SDK, based on the TypeScript example you provided.
+
+Hello LLM, please refactor the user's original JavaScript code to use the @google/genai SDK. The user has provided an example of how they'd like to use the SDK with the model gemini-2.0-flash-lite. The goal is to replace the fetch-based API calls with the SDK, update how requests are made, and handle responses accordingly.
+
+Here's how to proceed:
+
+Step 1: Setup and Initialization
+
+    Install Dependencies:
+    Ensure the project has the @google/genai package installed:
+
+          
+    npm install @google/genai
+
+        
+
+    IGNORE_WHEN_COPYING_START
+
+Use code with caution. Bash
+IGNORE_WHEN_COPYING_END
+
+The user's example also mentions mime and @types/node. @types/node is for TypeScript development. mime might not be needed if the SDK handles MIME types internally or if it wasn't used in the original logic that needs porting.
+
+Import Necessary Modules:
+At the top of the file, replace the old API constants with imports from the SDK:
+
+      
+// Remove:
+// const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// const API_URL = "https://generativelanguage.googleapis.com/v1/models";
+
+// Add:
+import { GoogleGenerativeAI, GenerationConfig, Content } from "@google/genai"; // Import other types as needed
+
+    
+
+IGNORE_WHEN_COPYING_START
+Use code with caution. TypeScript
+IGNORE_WHEN_COPYING_END
+
+Initialize GoogleGenerativeAI:
+The API key should now be used to instantiate GoogleGenerativeAI. The user's original code gets the API key from import.meta.env.VITE_GEMINI_API_KEY.
+
+      
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+if (!API_KEY) {
+  throw new Error("VITE_GEMINI_API_KEY is not set in environment variables.");
+}
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+    
+
+IGNORE_WHEN_COPYING_START
+Use code with caution. TypeScript
+IGNORE_WHEN_COPYING_END
+
+The user's example snippet const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, }); uses an options object for apiKey. The standard constructor GoogleGenerativeAI(apiKey: string) takes the key directly. We'll use the standard way.
+
+Define Model Name:
+The user specified the model:
+
+      
+const GEMINI_MODEL_NAME = "gemini-2.0-flash-lite"; // As per user's example
+
+    
+
+IGNORE_WHEN_COPYING_START
+
+    Use code with caution. TypeScript
+    IGNORE_WHEN_COPYING_END
+
+Step 2: Refactor the generateRoadmap Function
+
+    Update Function Signature and SDK Call:
+    Modify the function to use the SDK. We will use the generateContent method for a non-streaming response, which is easier to integrate with the existing JSON parsing logic.
+
+          
+    export async function generateRoadmap(businessIdea: string): Promise<RoadmapData> {
+      const prompt = `...`; // Keep the existing prompt
+
+      // Define the generation configuration
+      const generationConfig: GenerationConfig = {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json", // Crucial for getting JSON output
+      };
+
+      const model = genAI.getGenerativeModel({
+        model: GEMINI_MODEL_NAME,
+        generationConfig,
+        // Add safetySettings if needed, e.g.,
+        // safetySettings: [
+        //   { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        //   // ... other categories
+        // ]
+      });
+
+      const contents: Content[] = [{
+        role: "user",
+        parts: [{ text: prompt }]
+      }];
+
+      const fetchRoadmap = async () => {
+        console.log("Generating roadmap for:", businessIdea);
+        try {
+          const result = await model.generateContent({ contents });
+          const response = result.response;
+          const text = response.text(); // Method to get the text content
+
+          // The rest of the original parsing logic for 'text' can largely remain:
+          // console.log("Received API response text:", text);
+          // if (!text) {
+          //   throw new Error("Unexpected API response format. The response doesn't contain text.");
+          // }
+          // let sections;
+          // try {
+          //   sections = JSON.parse(text);
+          // } ... and so on
+
+          // The original candidate checking needs to be adapted or removed if SDK handles it.
+          // The SDK's `response.text()` should directly give the JSON string if `responseMimeType: "application/json"` works as expected.
+
+          // Example of processing the response (adapt based on actual SDK output):
+          if (!response || !response.candidates?.length || !response.candidates[0].content?.parts?.length || !response.candidates[0].content.parts[0].text) {
+             // If you still need to access raw candidates, structure will be like this.
+             // However, with responseMimeType: "application/json", response.text() is preferred.
+             // If response.text() doesn't work as expected or if you need to inspect candidates for other reasons:
+             // const candidateText = response.candidates[0].content.parts[0].text;
+             // sections = JSON.parse(candidateText);
+             // If using response.text() directly:
+             console.log("Received API response:", response); // Log the whole response for debugging
+             const rawText = response.text();
+             if (!rawText) {
+                throw new Error("Unexpected API response format. The response doesn't contain the expected data structure (empty text).");
+             }
+             sections = JSON.parse(rawText);
+          } else { // Fallback or primary path if response.text() is not directly the full JSON string
+            // This path is more aligned with the original candidate checking logic
+            const candidate = response.candidates[0];
+            if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0] || !candidate.content.parts[0].text) {
+                 throw new Error("Unexpected API response format. The response doesn't contain the expected data structure in candidates.");
+            }
+            const candidateText = candidate.content.parts[0].text;
+            sections = JSON.parse(candidateText);
+          }
+
+
+          // ... (rest of the section validation and formatting logic remains the same)
+          // ...
+
+          if (!Array.isArray(sections)) {
+            throw new Error("Invalid roadmap data format. Expected an array of sections.");
+          }
+
+          const formattedSections = sections.map((section: any, index: number) => {
+            // ... (existing formatting logic) ...
+             return {
+              ...section,
+              isExpanded: false
+            };
+          });
+
+          return {
+            businessIdea,
+            sections: formattedSections
+          };
+
+        } catch (error: any) {
+          console.error("Error in generateRoadmap (SDK call):", error);
+          // Adapt error handling. SDK errors might have a 'message' property.
+          // The custom 'handleApiError' function will need significant changes
+          // as it expects an HTTP Response object, not an SDK error object.
+          // For now, rethrow or handle directly.
+          // Example:
+          if (error.message && error.message.includes("429")) { // Crude check for rate limit
+             // This is where the retry logic from `retryWithBackoff`'s catch block would apply
+             // (error as any).status = 429; // To make it compatible with retryWithBackoff
+          }
+          // Rethrow to be caught by retryWithBackoff or handle with simplified messages
+          throw new Error(`Failed to generate roadmap: ${error.message || "Unknown SDK error"}`);
+        }
+      };
+
+      return retryWithBackoff(fetchRoadmap); // The retryWithBackoff can still be used
+    }
+
+        
+
+    IGNORE_WHEN_COPYING_START
+
+    Use code with caution. TypeScript
+    IGNORE_WHEN_COPYING_END
+
+Step 3: Refactor the generateDetailContent Function
+
+    Update Function Signature and SDK Call:
+    Similar changes as generateRoadmap, but for plain text/markdown output.
+
+          
+    export async function generateDetailContent(
+      subtopicId: string,
+      businessIdea: string,
+      subtopicTitle: string
+    ): Promise<DetailContent> {
+      const prompt = `...`; // Keep the existing prompt
+
+      const generationConfig: GenerationConfig = {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        responseMimeType: "text/plain", // For Markdown output
+      };
+
+      const model = genAI.getGenerativeModel({
+        model: GEMINI_MODEL_NAME,
+        generationConfig,
+        // safetySettings: [...] // Optional
+      });
+
+      const contents: Content[] = [{
+        role: "user",
+        parts: [{ text: prompt }]
+      }];
+
+      const fetchDetailContent = async () => {
+        console.log("Generating detail content for:", subtopicTitle);
+        try {
+          const result = await model.generateContent({ contents });
+          const response = result.response;
+          // const content = response.text(); // Preferred method
+
+          // The original candidate checking needs to be adapted or removed.
+          // The SDK's `response.text()` should directly give the markdown string.
+          let contentText: string;
+          if (response && response.candidates?.length && response.candidates[0].content?.parts?.length && response.candidates[0].content.parts[0].text) {
+            // This is how you'd access it if response.text() isn't sufficient or if you need to inspect candidates
+            contentText = response.candidates[0].content.parts[0].text;
+          } else if (response && typeof response.text === 'function' && response.text()) {
+             contentText = response.text();
+          }
+          else {
+            throw new Error("Unexpected API response format for detail content (SDK).");
+          }
+
+          // ... (rest of the original logic for section mapping and returning the object remains the same)
+          const sectionId = subtopicId.split('-')[0];
+          // ... (sectionMapping logic) ...
+
+          return {
+            title: subtopicTitle,
+            section: section, // 'section' from the mapping
+            content: contentText
+          };
+
+        } catch (error: any) {
+          console.error("Error in generateDetailContent (SDK call):", error);
+          // Adapt error handling similarly to generateRoadmap
+          throw new Error(`Failed to generate detail content: ${error.message || "Unknown SDK error"}`);
+        }
+      };
+
+      return retryWithBackoff(fetchDetailContent);
+    }
+
+        
+
+    IGNORE_WHEN_COPYING_START
+
+    Use code with caution. TypeScript
+    IGNORE_WHEN_COPYING_END
+
+Step 4: Adapt retryWithBackoff and handleApiError
+
+    retryWithBackoff:
+    This function can largely remain as is. The main change is that the fetchFn will now be making SDK calls. The error handling within its catch block:
+
+          
+    // Inside retryWithBackoff's catch block
+    } catch (error: any) {
+      // Only retry on rate limiting errors.
+      // SDK errors for rate limits might not have a 'status' property directly.
+      // You may need to inspect error.message or error.code if the SDK provides one.
+      // For a generic approach, you might check for "429" or "rate limit" in the message.
+      // Or, if the re-thrown error from the try block in fetchRoadmap/fetchDetailContent
+      // artificially adds a status, that could be used.
+      // Let's assume errors from the SDK calls might be GoogleGenerativeAIError which could have more details.
+      // For now, let's make a simple message check for "429" or "rate limit" if error.status is not available.
+      const isRateLimitError = (error.status === 429) || (error.message && (error.message.includes("429") || error.message.toLowerCase().includes("rate limit")));
+
+      if (!isRateLimitError) {
+        throw error;
+      }
+      // ... rest of retry logic
+    }
+
+        
+
+    IGNORE_WHEN_COPYING_START
+
+    Use code with caution. TypeScript
+    IGNORE_WHEN_COPYING_END
+
+    handleApiError:
+    This function is problematic because it's designed to process a Response object from fetch. The SDK calls will throw JavaScript Error objects (or custom SDK error objects like GoogleGenerativeAIError), not Response objects.
+
+        Option 1 (Simplify/Remove): Remove handleApiError and handle errors more directly within the catch blocks of generateRoadmap and generateDetailContent, or let them propagate to retryWithBackoff. The SDK errors usually have a descriptive message.
+
+        Option 2 (Adapt): If you want to keep the specific error messages, you'd need to rewrite handleApiError to accept an Error object and try to infer the type of error from its message or other properties (e.g., instanceof GoogleGenerativeAIError). This is more complex.
+
+    Recommendation: For now, remove the direct calls to handleApiError from within generateRoadmap and generateDetailContent. The simplified error throwing throw new Error(...) shown in the refactored functions should be sufficient for retryWithBackoff to catch and decide whether to retry. If more nuanced error messages are needed for the UI, that logic can be added back by inspecting the properties of the errors thrown by the SDK. The original handleApiError function could be kept if retryWithBackoff re-throws an error that it constructs with a status, but this seems overly complex.
+
+    If handleApiError is to be removed or significantly changed, the lines if (!response.ok) { return handleApiError(response); } in the original generateRoadmap and generateDetailContent are replaced by the SDK's try...catch around model.generateContent().
+
+Step 5: Streaming (Note)
+
+The user's example snippet used generateContentStream. The instructions above use generateContent for simpler integration with the existing response parsing logic (especially for JSON). If streaming output is required (e.g., for displaying text as it arrives), the generateContentStream method should be used, and the logic for collecting and processing chunks would need to be implemented:
+
+      
+// Example for streaming (would require significant changes to parsing logic)
+// const streamResult = await model.generateContentStream({ contents });
+// let text = "";
+// for await (const chunk of streamResult.stream) {
+//   const chunkText = chunk.text();
+//   console.log(chunkText); // Or append to a display
+//   text += chunkText;
+// }
+// // Now 'text' contains the full response, process it.
+
+    
+
+IGNORE_WHEN_COPYING_START
+Use code with caution. TypeScript
+IGNORE_WHEN_COPYING_END
+
+For the current task, generateContent is more appropriate to match the original code's full-response processing model.
+
+Step 6: Final Review
+
+    Ensure all fetch calls related to the Gemini API are replaced.
+
+    Verify that generationConfig (including responseMimeType) is correctly passed.
+
+    Test error handling, especially for API key issues or invalid requests, to see what kind of errors the SDK throws and adjust retry/display logic if needed.
+
+    The import.meta.env.VITE_GEMINI_API_KEY is specific to Vite projects. Ensure this is the correct way to access environment variables in the target environment. If not (e.g., Node.js backend), use process.env.GEMINI_API_KEY.
+
+This detailed guide should help you refactor the code to use the @google/genai SDK effectively.
