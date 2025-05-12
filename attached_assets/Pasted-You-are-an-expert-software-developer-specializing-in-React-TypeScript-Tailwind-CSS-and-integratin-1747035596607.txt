@@ -1,0 +1,82 @@
+You are an expert software developer specializing in React, TypeScript, Tailwind CSS, and integrating with Google's Gemini API. Your goal is to create a web application that generates business roadmaps based on user input.
+
+The application should:
+
+1.  **Use JSX syntax with Tailwind CSS classes for styling.** Ensure the design is beautiful, fully featured, and production-worthy, avoiding cookie-cutter aesthetics. Use icons from `lucide-react` for logos and other visual elements. Do not install other UI theme or icon packages unless explicitly instructed.
+
+2.  **Implement a user interface with the following components:**
+    *   A landing page (`Home.tsx`) with a search bar (`SearchBar.tsx`) where users can enter their business idea. Include a visually appealing design with clear instructions and feature highlights. Use `framer-motion` for smooth animations and transitions.
+    *   A roadmap page (`RoadmapPage.tsx`) that displays the generated business roadmap in a structured format. Each roadmap section should be expandable to show subtopics.
+    *   A detail page (`DetailPage.tsx`) that provides in-depth information about each subtopic. The content should be formatted using Markdown.
+    *   A header (`Header.tsx`) with a logo (using a `lucide-react` icon) and navigation links.
+    *   A layout component (`Layout.tsx`) that provides a consistent structure for all pages.
+    *   A loading overlay (`LoadingOverlay.tsx`) to indicate when the application is processing data.
+
+3.  **Integrate with Google's Gemini API** to generate the business roadmap and detailed content for each subtopic.
+    *   Use the `gemini-2.5-pro-exp-03-25` model.
+    *   Implement rate limiting with exponential backoff and retry logic to handle API errors (specifically HTTP 429 errors). The initial retry delay should be 1 second, the maximum retry delay should be 32 seconds, and the maximum number of retries should be 3.
+    *   Handle potential errors from the Gemini API gracefully and display informative error messages to the user.
+
+4.  **Implement the following data structures (in `src/types/index.ts`):**
+
+    ```typescript
+    export interface Subtopic {
+      id: string;
+      title: string;
+      description: string;
+    }
+
+    export interface RoadmapSection {
+      id: string;
+      title: string;
+      description: string;
+      subtopics: Subtopic[];
+      isExpanded: boolean;
+    }
+
+    export interface RoadmapData {
+      businessIdea: string;
+      sections: RoadmapSection[];
+    }
+
+    export interface DetailContent {
+      title: string;
+      section: string;
+      content: string;
+    }
+    ```
+
+5.  **Use React Context** (`RoadmapContext.tsx`) to manage the roadmap data, loading state, and error state. Implement the following functions:
+    *   `generateBusinessRoadmap(businessIdea: string)`: Generates the business roadmap using the Gemini API.
+    *   `getDetailContent(subtopicId: string)`: Generates detailed content for a subtopic using the Gemini API.
+    *   `toggleSectionExpansion(sectionId: string)`: Toggles the expansion state of a roadmap section.
+    *   `resetRoadmap()`: Resets the roadmap data.
+
+6.  **Implement routing** using `react-router-dom` to navigate between the home page, roadmap page, and detail page.
+
+7.  **Use Tailwind CSS** for styling. Configure Tailwind CSS with the `Inter` font family and typography plugin.
+
+8.  **Environment Variables:** Use Vite's `import.meta.env` to access environment variables for the Gemini API key and Supabase credentials. Ensure these are properly configured in `.env` file.
+
+9.  **API Calls:** Implement the following functions in `src/utils/geminiApi.ts`:
+    *   `generateRoadmap(businessIdea: string)`: Calls the Gemini API to generate a business roadmap. The prompt should instruct the API to return a JSON array of roadmap sections, each with an ID, title, description, and an array of subtopics (each with an ID, title, and description). Include exactly 10 sections, each with exactly 5 subtopics. Focus on practical, actionable steps specific to the given business idea.
+    *   `generateDetailContent(subtopicId: string, businessIdea: string, subtopicTitle: string)`: Calls the Gemini API to generate detailed content for a specific subtopic. The prompt should instruct the API to return the content in Markdown format, with sections for Overview, Why This Matters, Step-by-Step Guide, Best Practices, Common Pitfalls, Industry-Specific Considerations, and Next Steps.
+
+10. **Database:** You are not allowed to use edge functions. Instead, use webhooks/automation to generate the response.
+
+11. **Error Handling:** Implement comprehensive error handling throughout the application. Display user-friendly error messages in the UI.
+
+12. **Do not modify the `supabase/migrations/20250427205635_icy_grove.sql` file.**
+
+13. **Components:**
+    *   SearchBar:
+        *   The search bar should have a focused state with a subtle shadow and border color change.
+        *   The button should have a loading state that displays a spinner.
+        *   Error messages should be displayed below the search bar with a smooth animation.
+
+14. **Types:**
+    *   Ensure all components are properly typed using TypeScript.
+
+15. **File Structure:** Maintain a clean and organized file structure, separating components, contexts, utils, and types into appropriate directories.
+
+Provide the complete source code for all components, contexts, utils, and types. Ensure the code is well-formatted, readable, and follows best practices for React, TypeScript, and Tailwind CSS.
