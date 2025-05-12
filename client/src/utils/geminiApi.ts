@@ -121,15 +121,17 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
         throw new Error("Unexpected API response format. The response doesn't contain text.");
       }
       
-      // Remove markdown code fence if present
-      const cleanText = text.replace(/^```json\n|\n```$/g, '').trim();
+      // Extract JSON from markdown if present using a more robust regex
+      const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/) || text.match(/(\[[\s\S]*?\])/);
+      const jsonContent = jsonMatch ? jsonMatch[1].trim() : text.trim();
       
       // Parse the sections
       let sections;
       try {
-        sections = JSON.parse(cleanText);
+        sections = JSON.parse(jsonContent);
       } catch (parseError) {
         console.error("Failed to parse JSON from API response:", parseError);
+        console.error("Raw text response (first 500 chars):", text.substring(0, 500));
         throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
       }
       
@@ -249,9 +251,11 @@ async function generateApproachSuggestions(
       throw new Error("Empty response from suggestions API");
     }
     
-    // Try to extract JSON from the response
+    // Try to extract JSON from the response, handling markdown code blocks
     try {
-      const suggestions = JSON.parse(text);
+      const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/) || text.match(/(\[[\s\S]*?\])/);
+      const jsonContent = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      const suggestions = JSON.parse(jsonContent);
       
       // Validate structure and return
       if (Array.isArray(suggestions) && suggestions.length > 0) {
