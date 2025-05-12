@@ -121,7 +121,9 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
       // Parse the sections
       let sections;
       try {
-        sections = JSON.parse(text);
+        // Remove markdown code block markers and any surrounding whitespace
+        const cleanedText = text.replace(/```json\n|\n```/g, '').trim();
+        sections = JSON.parse(cleanedText);
       } catch (parseError) {
         console.error("Failed to parse JSON from API response:", parseError);
         console.log("Raw text response (first 500 chars):", text.substring(0, 500));
@@ -130,7 +132,8 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           try {
-            sections = JSON.parse(jsonMatch[0]);
+            const cleanedMatch = jsonMatch[0].replace(/```json\n|\n```/g, '').trim();
+            sections = JSON.parse(cleanedMatch);
             console.log("Successfully extracted JSON using regex");
           } catch (e) {
             throw new Error("Failed to parse roadmap data. The API did not return valid JSON.");
@@ -258,7 +261,9 @@ async function generateApproachSuggestions(
     
     // Try to extract JSON from the response
     try {
-      const suggestions = JSON.parse(text);
+      // Remove markdown code block markers and any surrounding whitespace
+      const cleanedText = text.replace(/```json\n|\n```/g, '').trim();
+      const suggestions = JSON.parse(cleanedText);
       
       // Validate structure and return
       if (Array.isArray(suggestions) && suggestions.length > 0) {
