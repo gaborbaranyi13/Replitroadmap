@@ -1,0 +1,36 @@
+Failed to parse JSON from API response: 
+SyntaxError {}
+message: "Unexpected token '`', "```json↵[↵"... is not valid JSON"
+stack: "SyntaxError: Unexpected token '`', "```json↵[↵"... is not valid JSON↵ at JSON.parse (<anonymous>)↵ at fetchRoadmap (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/utils/geminiApi.ts:86:25)↵ at async retryWithBackoff (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/utils/geminiApi.ts:21:14)↵ at async generateBusinessRoadmap (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/contexts/RoadmapContext.tsx:34:20)↵ at async handleSubmit (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/components/SearchBar.tsx:33:5)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Raw text response (first 500 chars): ```json
+[
+  {
+    "id": "section-1",
+    "title": "Idea & Market Validation",
+    "description": "Defining the core problem, target audience, and validating the market need for the SaaS solution before significant investment.",
+    "subtopics": [
+      {
+        "id": "section-1-1",
+        "title": "Define Problem & Solution",
+        "description": "Clearly articulate the specific problem the SaaS product solves and the proposed solution."
+      },
+      {
+        "id": "section-1-2",
+        
+Successfully extracted JSON using regex
+Generating detail content for: Define Pricing Strategy & Tiers
+Error in generateDetailContent: 
+GoogleGenerativeAIFetchError {status: 503, statusText: "", errorDetails: undefined}
+errorDetails: undefined
+status: 503
+statusText: ""
+message: "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent: [503 ] The model is overloaded. Please try again later."
+stack: "Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent: [503 ] The model is overloaded. Please try again later.↵ at handleResponseNotOk (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@google_generative-ai.js?v=87d865ac:226:9)↵ at async makeRequest (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@google_generative-ai.js?v=87d865ac:199:5)↵ at async generateContent (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@google_generative-ai.js?v=87d865ac:544:20)↵ at async fetchDetailContent (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/utils/geminiApi.ts:514:22)↵ at async retryWithBackoff (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/utils/geminiApi.ts:21:14)↵ at async getDetailContent (https://2fcaa01d-bcb0-4b16-9731-f9dd3eba2609-00-5zz8iibv7laq.picard.replit.dev/src/contexts/RoadmapContext.tsx:72:25)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
