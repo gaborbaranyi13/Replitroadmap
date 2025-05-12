@@ -46,7 +46,7 @@ const SuggestionChips: React.FC<SuggestionChipsProps> = ({ suggestions, subtopic
   // Handle chip click - call the API with a custom prompt
   const handleChipClick = async (suggestion: ApproachSuggestion) => {
     try {
-      // Apply the selected approach
+      // Set creative mode to true and use the specific approach type
       await getDetailContent(subtopicId, true, suggestion.approachType);
       
       toast({

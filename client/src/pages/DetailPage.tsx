@@ -3,6 +3,7 @@ import { useRoute, Link } from "wouter";
 import { useRoadmap } from "@/contexts/RoadmapContext";
 import Layout from "@/components/Layout";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import SuggestionChips from "@/components/SuggestionChips";
 import { motion } from "framer-motion";
 import { ArrowLeft, Bookmark, Share2, Printer, FileText, AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -156,6 +157,14 @@ const DetailPage: React.FC = () => {
               Follow these detailed steps, best practices, and expert recommendations.
             </p>
           </div>
+          
+          {detailContent.suggestions && detailContent.suggestions.length > 0 && (
+            <SuggestionChips 
+              suggestions={detailContent.suggestions} 
+              subtopicId={params?.subtopicId || ""} 
+              businessIdea={roadmapData?.businessIdea || ""}
+            />
+          )}
           
           <div className="prose prose-blue lg:prose-lg max-w-none">
             <ReactMarkdown>{detailContent.content}</ReactMarkdown>

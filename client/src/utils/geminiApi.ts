@@ -345,11 +345,186 @@ export async function generateDetailContent(
   subtopicId: string,
   businessIdea: string,
   subtopicTitle: string,
-  creativeApproach = false
+  creativeApproach = false,
+  approachType?: string
 ): Promise<DetailContent> {
   let prompt;
   
-  if (creativeApproach) {
+  if (creativeApproach && approachType) {
+    // Handle specific approach types
+    switch(approachType) {
+      case 'innovative':
+        prompt = `
+          Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+          
+          Take an INNOVATIVE approach focusing on cutting-edge technologies, forward-thinking strategies, and breakthrough solutions.
+          Consider emerging technologies, disruptive business models, and state-of-the-art methodologies.
+          
+          Format your response in Markdown with the following sections:
+          
+          ## Innovative Approach
+          [Introduce a cutting-edge, forward-thinking approach utilizing the latest technologies and methodologies]
+          
+          ## Technological Advantage
+          [Describe the technological advantages this approach offers over traditional methods]
+          
+          ## Implementation Roadmap
+          [Detailed steps to implement this innovative solution]
+          
+          ## Technology Stack & Tools
+          [Specific cutting-edge technologies, platforms, or tools to utilize]
+          
+          ## Market Differentiation
+          [How this approach positions the business as an industry innovator]
+          
+          ## Future-Proofing
+          [How this approach anticipates future market trends and technological developments]
+          
+          ## Measuring Innovation Success
+          [Key metrics and indicators to evaluate the effectiveness of this innovative approach]
+          
+          Make the content focused on innovation and emerging technologies while remaining practical and actionable.
+        `;
+        break;
+        
+      case 'traditional':
+        prompt = `
+          Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+          
+          Take a TRADITIONAL approach focusing on proven methods, established practices, and reliable strategies.
+          Emphasize stability, predictability, and well-documented methodologies with track records of success.
+          
+          Format your response in Markdown with the following sections:
+          
+          ## Proven Approach
+          [Introduce a well-established, time-tested methodology for this aspect of business]
+          
+          ## Historical Success Patterns
+          [Examples of how this traditional approach has succeeded in similar contexts]
+          
+          ## Implementation Framework
+          [Detailed steps following established best practices]
+          
+          ## Industry Standards
+          [Relevant standards, certifications, or benchmarks to adhere to]
+          
+          ## Risk Mitigation
+          [How this tried-and-true approach minimizes common business risks]
+          
+          ## Building on Tradition
+          [Ways to enhance traditional methods with minor modern improvements]
+          
+          ## Long-Term Stability
+          [How this approach ensures consistent, reliable business operations]
+          
+          Make the content focused on proven reliability and established practices while being thorough and systematic.
+        `;
+        break;
+        
+      case 'cost-effective':
+        prompt = `
+          Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+          
+          Take a COST-EFFECTIVE approach focusing on budget-friendly solutions, resource optimization, and maximum ROI.
+          Emphasize bootstrapping strategies, lean methodologies, and smart resource allocation.
+          
+          Format your response in Markdown with the following sections:
+          
+          ## Budget-Conscious Strategy
+          [Introduce an approach that minimizes costs while maximizing impact]
+          
+          ## ROI Analysis
+          [Framework for evaluating cost-benefit ratios for this business aspect]
+          
+          ## Resource Optimization
+          [Specific ways to achieve more with fewer resources]
+          
+          ## Low-Cost Alternatives
+          [Budget-friendly tools, services, and methodologies]
+          
+          ## Gradual Scaling Model
+          [How to start small and scale efficiently as the business grows]
+          
+          ## Cost Pitfalls to Avoid
+          [Common ways businesses overspend in this area]
+          
+          ## Measuring Economic Efficiency
+          [Key metrics for tracking cost-effectiveness of this approach]
+          
+          Make the content practical with a strong focus on smart budgeting and resource allocation while still achieving business goals.
+        `;
+        break;
+        
+      case 'technical':
+        prompt = `
+          Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+          
+          Take a TECHNICAL approach focusing on systems optimization, process efficiency, and technical excellence.
+          Emphasize detailed technical implementation, architecture considerations, and engineering best practices.
+          
+          Format your response in Markdown with the following sections:
+          
+          ## Technical Foundation
+          [Introduce a technically-optimized approach with focus on systems and processes]
+          
+          ## System Architecture
+          [Technical framework and components needed for implementation]
+          
+          ## Integration Points
+          [How this system connects with other business systems and processes]
+          
+          ## Technical Requirements
+          [Specific infrastructure, software, or technical capabilities needed]
+          
+          ## Optimization Strategies
+          [Methods for maximizing performance, reliability, and scalability]
+          
+          ## Technical Debt Considerations
+          [How to build robust systems while avoiding future technical debt]
+          
+          ## Performance Metrics
+          [Technical KPIs and benchmarks to monitor system health and efficiency]
+          
+          Make the content technically rigorous yet accessible, with an emphasis on building robust, efficient systems.
+        `;
+        break;
+        
+      default:
+        // Default to creative approach if approachType is not recognized
+        prompt = `
+          Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
+          
+          Try a radically different approach in your response. Be innovative, think outside the box, and challenge conventional wisdom.
+          Consider unconventional strategies, cutting-edge technologies, or unique business models that might not be standard in the industry.
+          
+          Format your response in Markdown with the following sections:
+          
+          ## Unconventional Approach
+          [Introduce a bold, innovative approach to this subtopic that challenges business-as-usual thinking]
+          
+          ## Why Traditional Methods Fall Short
+          [Explain limitations of conventional approaches and why innovation is needed]
+          
+          ## Innovative Implementation Strategy
+          [Detailed, actionable steps to implement this creative approach]
+          
+          ## Embracing Disruption
+          [How to leverage emerging trends, technologies, or methodologies in groundbreaking ways]
+          
+          ## Managing Risks of Innovation
+          [How to mitigate potential downsides of taking an unconventional path]
+          
+          ## Competitive Advantage
+          [How this approach creates unique value and sets "${businessIdea}" apart from competitors]
+          
+          ## Measuring Success Differently
+          [New metrics or frameworks to evaluate the success of this approach]
+          
+          Make the content bold, provocative yet practical, and immediately useful to someone implementing this business idea. Focus on actionable insights that truly challenge the status quo.
+        `;
+    }
+  } else if (creativeApproach) {
+    // Original creative approach without specific type
     prompt = `
       Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
       
@@ -382,6 +557,7 @@ export async function generateDetailContent(
       Make the content bold, provocative yet practical, and immediately useful to someone implementing this business idea. Focus on actionable insights that truly challenge the status quo.
     `;
   } else {
+    // Standard approach
     prompt = `
       Generate detailed content for the business roadmap subtopic: "${subtopicTitle}" for a business idea: "${businessIdea}".
       

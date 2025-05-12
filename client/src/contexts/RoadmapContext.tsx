@@ -44,7 +44,7 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const getDetailContent = async (subtopicId: string, creativeApproach = false) => {
+  const getDetailContent = async (subtopicId: string, creativeApproach = false, approachType?: string) => {
     if (!roadmapData) {
       setError("No roadmap data available. Please generate a roadmap first.");
       return;
@@ -79,7 +79,8 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
           subtopicId,
           roadmapData.businessIdea,
           subtopic.title,
-          creativeApproach
+          creativeApproach,
+          approachType
         );
         
         if (creativeApproach) {
