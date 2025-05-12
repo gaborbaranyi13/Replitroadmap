@@ -102,6 +102,9 @@ export async function generateRoadmap(businessIdea: string): Promise<RoadmapData
     console.log("Generating roadmap for:", businessIdea);
     
     try {
+      // Add a small delay to avoid rapid successive API calls
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Make the API call using the SDK
       const result = await model.generateContent({ contents });
       const response = result.response;
@@ -252,6 +255,9 @@ export async function generateDetailContent(
     console.log("Generating detail content for:", subtopicTitle);
     
     try {
+      // Add a small delay to avoid rapid successive API calls
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Make the API call using the SDK
       const result = await model.generateContent({ contents });
       const response = result.response;

@@ -68,13 +68,36 @@ export const RoadmapProvider: React.FC<{ children: ReactNode }> = ({ children })
         throw new Error(`Subtopic ${subtopicId} not found.`);
       }
 
-      const content = await generateDetailContent(
-        subtopicId,
-        roadmapData.businessIdea,
-        subtopic.title
-      );
-      
-      setDetailContent(content);
+      // Check if we already have this content to prevent unnecessary API calls
+      if (detailContent && detailContent.title === subtopic.title) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const content = await generateDetailContent(
+          subtopicId,
+          roadmapData.businessIdea,
+          subtopic.title
+        );
+        
+        setDetailContent(content);
+      } catch (apiError: any) {
+        // Handle rate limiting errors more gracefully
+        if (apiError.status === 429 || 
+            (apiError.message && (
+              apiError.message.includes("429") || 
+              apiError.message.toLowerCase().includes("rate limit") ||
+              apiError.message.toLowerCase().includes("quota exceeded")
+            ))
+        ) {
+          throw new Error(
+            "API rate limit reached. Please wait a few moments before trying again."
+          );
+        } else {
+          throw apiError; // Re-throw other errors
+        }
+      }
     } catch (err: any) {
       const errorMessage = err.message || "Failed to generate detail content. Please try again.";
       setError(errorMessage);

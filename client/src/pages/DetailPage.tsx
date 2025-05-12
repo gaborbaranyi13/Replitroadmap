@@ -1,21 +1,27 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useRoadmap } from "@/contexts/RoadmapContext";
 import Layout from "@/components/Layout";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { motion } from "framer-motion";
-import { ArrowLeft, Bookmark, Share2, Printer, FileText } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, Printer, FileText, AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 const DetailPage: React.FC = () => {
   const [match, params] = useRoute("/detail/:subtopicId");
-  const { roadmapData, detailContent, isLoading, getDetailContent } = useRoadmap();
+  const { roadmapData, detailContent, isLoading, error, getDetailContent } = useRoadmap();
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [currentSubtopicId, setCurrentSubtopicId] = useState<string | null>(null);
   
   useEffect(() => {
-    if (match && params?.subtopicId && roadmapData) {
+    if (match && params?.subtopicId && roadmapData && 
+        (!hasAttemptedLoad || params.subtopicId !== currentSubtopicId)) {
+      // Only fetch if we haven't attempted yet, or if the subtopic ID changed
+      setHasAttemptedLoad(true);
+      setCurrentSubtopicId(params.subtopicId);
       getDetailContent(params.subtopicId);
     }
-  }, [match, params?.subtopicId, roadmapData, getDetailContent]);
+  }, [match, params?.subtopicId, roadmapData, getDetailContent, hasAttemptedLoad, currentSubtopicId]);
 
   // Add title to document
   useEffect(() => {
@@ -27,8 +33,43 @@ const DetailPage: React.FC = () => {
     };
   }, [detailContent]);
 
-  if (isLoading || !detailContent) {
+  if (isLoading) {
     return <LoadingOverlay isVisible={true} message="Generating detailed content..." />;
+  }
+  
+  if (error && hasAttemptedLoad) {
+    return (
+      <Layout>
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
+          <div className="mb-6">
+            <Link 
+              href="/roadmap" 
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Roadmap</span>
+            </Link>
+          </div>
+          
+          <div className="bg-white shadow-lg rounded-xl p-8 md:p-10 border border-gray-100 text-center">
+            <AlertTriangle className="w-16 h-16 mx-auto text-amber-500 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Content Generation Error</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <p className="text-gray-500 mb-8">This might be due to API rate limits or service disruption.</p>
+            <Link
+              href="/roadmap"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Return to Roadmap
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  if (!detailContent) {
+    return <LoadingOverlay isVisible={true} message="Preparing content..." />;
   }
 
   const handlePrint = () => {
